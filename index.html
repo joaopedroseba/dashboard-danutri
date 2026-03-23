@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Danutri — Digihook Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base:        #080d18;
+      --bg-surface:     #0c1220;
+      --bg-card:        rgba(255,255,255,0.035);
+      --bg-card-hover:  rgba(255,255,255,0.065);
+      --border:         rgba(255,255,255,0.07);
+      --border-light:   rgba(255,255,255,0.13);
+      --accent:         #0ea5e9;
+      --accent-l:       #38bdf8;
+      --accent2:        #f97316;
+      --green:          #10b981;
+      --amber:          #f59e0b;
+      --red:            #ef4444;
+      --purple:         #8b5cf6;
+      --pink:           #ec4899;
+      --teal:           #14b8a6;
+      --text-primary:   #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted:     #475569;
+      --sidebar-w:      240px;
+      --radius:         14px;
+      --radius-sm:      8px;
+      --transition:     0.15s ease;
+    }
+
+    html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--bg-base); color: var(--text-primary); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+    /* ── Layout ────────────────────────────────────── */
+    .app  { display: flex; min-height: 100vh; }
+    .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ── Sidebar ───────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w); min-height: 100vh;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+    }
+    .sidebar-logo { padding: 22px 18px 18px; border-bottom: 1px solid var(--border); }
+    .logo-mark { display: flex; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 38px; height: 38px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), #0284c7);
+      border-radius: 11px; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 20px rgba(14,165,233,0.35);
+    }
+    .logo-icon svg { width: 20px; height: 20px; fill: white; }
+    .logo-text { font-weight: 800; font-size: 14px; background: linear-gradient(90deg, var(--accent-l), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: -0.02em; }
+    .logo-sub  { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+    .sidebar-nav { padding: 14px 10px; flex: 1; overflow-y: auto; }
+    .nav-section { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); padding: 10px 8px 5px; margin-top: 6px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px; border-radius: var(--radius-sm);
+      cursor: pointer; color: var(--text-secondary); font-weight: 500;
+      transition: all var(--transition); margin-bottom: 1px;
+      border: 1px solid transparent; background: none; width: 100%; font-size: 13px;
+      text-align: left;
+    }
+    .nav-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+    .nav-item.active { background: rgba(14,165,233,0.12); color: var(--accent-l); border-color: rgba(14,165,233,0.25); }
+    .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    .sidebar-footer { padding: 14px 10px; border-top: 1px solid var(--border); }
+    .user-card { display: flex; align-items: center; gap: 9px; padding: 8px; border-radius: var(--radius-sm); background: var(--bg-card); }
+    .user-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: white; flex-shrink: 0; }
+    .user-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .user-role { font-size: 10px; color: var(--text-muted); }
+
+    /* ── Topbar ────────────────────────────────────── */
+    .topbar {
+      height: 58px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; border-bottom: 1px solid var(--border);
+      background: rgba(8,13,24,0.9); backdrop-filter: blur(16px);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-left h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+    .topbar-left span { font-size: 11px; color: var(--text-secondary); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+    .sync-btn {
+      display: flex; align-items: center; gap: 6px; padding: 6px 14px;
+      background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.25);
+      border-radius: var(--radius-sm); color: var(--accent-l); font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all var(--transition);
+    }
+    .sync-btn:hover { background: rgba(14,165,233,0.2); }
+    .sync-btn.loading svg { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .sync-btn svg { width: 13px; height: 13px; }
+
+    /* ── Filter bar ────────────────────────────────── */
+    .filter-bar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 10px 24px; border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+    }
+    .filter-label { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .period-pills { display: flex; gap: 4px; }
+    .pill-btn {
+      padding: 5px 13px; border-radius: 20px; font-size: 11px; font-weight: 500;
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-secondary); cursor: pointer; transition: all 0.12s;
+    }
+    .pill-btn:hover { border-color: var(--border-light); color: var(--text-primary); }
+    .pill-btn.active { background: rgba(14,165,233,0.14); border-color: rgba(14,165,233,0.32); color: var(--accent-l); }
+    .custom-range { display: none; align-items: center; gap: 6px; margin-left: 4px; }
+    .custom-range.visible { display: flex; }
+    .date-input { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 11px; padding: 4px 10px; font-family: inherit; cursor: pointer; }
+    .date-input:focus { outline: none; border-color: var(--accent); }
+    .date-sep { color: var(--text-muted); font-size: 11px; }
+    .filter-note { margin-left: auto; font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+
+    /* ── Content ───────────────────────────────────── */
+    .content { padding: 22px 24px; flex: 1; }
+    .view { display: none; }
+    .view.active { display: block; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    /* ── Section title ─────────────────────────────── */
+    .section-title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── KPI Grid ──────────────────────────────────── */
+    .kpi-grid   { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+    .kpi-grid-8 { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; margin-bottom: 18px; }
+    .kpi-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 14px;
+      position: relative; overflow: hidden;
+      transition: background var(--transition), border-color var(--transition), transform var(--transition);
+    }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: 2px 2px 0 0; }
+    .kpi-card:hover { background: var(--bg-card-hover); border-color: var(--border-light); transform: translateY(-1px); }
+    .kpi-card.c1::before { background: linear-gradient(90deg,#0ea5e9,#38bdf8); }
+    .kpi-card.c2::before { background: linear-gradient(90deg,#f97316,#fb923c); }
+    .kpi-card.c3::before { background: linear-gradient(90deg,#10b981,#6ee7b7); }
+    .kpi-card.c4::before { background: linear-gradient(90deg,#f59e0b,#fcd34d); }
+    .kpi-card.c5::before { background: linear-gradient(90deg,#8b5cf6,#a78bfa); }
+    .kpi-card.c6::before { background: linear-gradient(90deg,#ef4444,#fca5a5); }
+    .kpi-card.c7::before { background: linear-gradient(90deg,#ec4899,#f9a8d4); }
+    .kpi-card.c8::before { background: linear-gradient(90deg,#14b8a6,#5eead4); }
+    .kpi-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+    .kpi-icon svg { width: 14px; height: 14px; }
+    .kpi-icon.c1{background:rgba(14,165,233,0.16)} .kpi-icon.c1 svg{stroke:#38bdf8}
+    .kpi-icon.c2{background:rgba(249,115,22,0.16)} .kpi-icon.c2 svg{stroke:#f97316}
+    .kpi-icon.c3{background:rgba(16,185,129,0.16)} .kpi-icon.c3 svg{stroke:#10b981}
+    .kpi-icon.c4{background:rgba(245,158,11,0.16)} .kpi-icon.c4 svg{stroke:#f59e0b}
+    .kpi-icon.c5{background:rgba(139,92,246,0.16)} .kpi-icon.c5 svg{stroke:#8b5cf6}
+    .kpi-icon.c6{background:rgba(239,68,68,0.16)}  .kpi-icon.c6 svg{stroke:#ef4444}
+    .kpi-icon.c7{background:rgba(236,72,153,0.16)} .kpi-icon.c7 svg{stroke:#ec4899}
+    .kpi-icon.c8{background:rgba(20,184,166,0.16)} .kpi-icon.c8 svg{stroke:#14b8a6}
+    .kpi-value { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 2px; }
+    .kpi-label { font-size: 11px; color: var(--text-secondary); }
+    .kpi-sub   { font-size: 10px; color: var(--text-muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+
+    /* ── Chart grids ───────────────────────────────── */
+    .chart-grid-2   { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; margin-bottom: 14px; }
+    .chart-grid-2b  { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .chart-grid-3   { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .chart-full     { margin-bottom: 14px; }
+
+    /* ── Card ──────────────────────────────────────── */
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; transition: border-color var(--transition); }
+    .card:hover { border-color: var(--border-light); }
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+    .card-title { font-size: 13px; font-weight: 600; }
+    .card-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Doughnut ──────────────────────────────────── */
+    .doughnut-wrap { display: flex; flex-direction: column; align-items: center; }
+    .doughnut-chart-container { position: relative; width: 150px; height: 150px; margin: 0 auto; }
+    .doughnut-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: none; }
+    .doughnut-center-value { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+    .doughnut-center-label { font-size: 9px; color: var(--text-muted); }
+    .legend { width: 100%; margin-top: 12px; }
+    .legend-item { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); }
+    .legend-item:last-child { border-bottom: none; }
+    .legend-left { display: flex; align-items: center; gap: 7px; min-width: 0; }
+    .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .legend-name { font-size: 10px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .legend-val  { font-size: 10px; font-weight: 600; flex-shrink: 0; }
+    .legend-pct  { font-size: 9px; color: var(--text-muted); margin-left: 4px; }
+
+    /* ── Table ─────────────────────────────────────── */
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    thead th { text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); padding: 0 10px 10px; white-space: nowrap; }
+    tbody tr { border-top: 1px solid var(--border); transition: background 0.1s; }
+    tbody tr:hover { background: var(--bg-card-hover); }
+    tbody td { padding: 8px 10px; font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+    tbody td:first-child { color: var(--text-primary); font-weight: 500; }
+
+    /* ── Rankings / Badges ─────────────────────────── */
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 600; }
+    .badge-above { background: rgba(16,185,129,0.14); color: #6ee7b7; }
+    .badge-avg   { background: rgba(245,158,11,0.14); color: #fcd34d; }
+    .badge-below { background: rgba(239,68,68,0.14);  color: #fca5a5; }
+    .badge-none  { background: rgba(71,85,105,0.2);   color: #64748b; }
+
+    /* ── Tags ──────────────────────────────────────── */
+    .tag-good { background: rgba(16,185,129,0.14); color: #6ee7b7; padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 600; }
+    .tag-warn { background: rgba(245,158,11,0.14); color: #fcd34d; padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 600; }
+    .tag-bad  { background: rgba(239,68,68,0.14);  color: #fca5a5; padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 600; }
+
+    /* ── Insights ──────────────────────────────────── */
+    .insights-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .insight-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; transition: border-color var(--transition); }
+    .insight-card:hover { border-color: var(--border-light); }
+    .insight-card.full { grid-column: 1 / -1; }
+    .insight-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .insight-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .insight-icon svg { width: 14px; height: 14px; }
+    .insight-title { font-size: 13px; font-weight: 600; flex: 1; }
+    .insight-body { font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+    .insight-body strong { color: var(--text-primary); font-weight: 600; }
+    .insight-list { list-style: none; display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+    .insight-list li { display: flex; gap: 8px; font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+    .insight-list li::before { content: '→'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+    .insight-list li strong { color: var(--text-primary); }
+    .metric-row { display: flex; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); gap: 10px; }
+    .metric-row:last-child { border-bottom: none; }
+    .metric-name  { font-size: 12px; color: var(--text-secondary); width: 120px; flex-shrink: 0; }
+    .metric-bar   { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+    .metric-fill  { height: 100%; border-radius: 2px; transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+    .metric-value { font-size: 12px; font-weight: 600; width: 80px; text-align: right; flex-shrink: 0; }
+
+    /* ── Loader / Error ────────────────────────────── */
+    .loader-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 380px; gap: 12px; }
+    .spinner { width: 34px; height: 34px; border: 2.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    .loader-text { color: var(--text-secondary); font-size: 13px; }
+    .empty-icon { opacity: 0.3; }
+    .empty-title { font-size: 15px; color: var(--text-secondary); font-weight: 500; }
+    .empty-desc  { font-size: 12px; color: var(--text-muted); text-align: center; max-width: 340px; line-height: 1.6; }
+    .error-box { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: var(--radius); padding: 24px; text-align: center; color: var(--red); }
+
+    /* ── Status bar ────────────────────────────────── */
+    .status-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 24px; border-top: 1px solid var(--border); background: var(--bg-surface); }
+    .status-bar-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted); }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+    .status-dot.loading { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ── Hamburger ─────────────────────────────────── */
+    .menu-btn {
+      display: none; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: var(--radius-sm);
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-secondary); cursor: pointer; flex-shrink: 0;
+    }
+    .menu-btn svg { width: 16px; height: 16px; }
+
+    /* ── Sidebar overlay ───────────────────────────── */
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0; z-index: 99;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+    }
+    .sidebar-overlay.visible { display: block; }
+
+    /* ── Responsive ────────────────────────────────── */
+    @media (max-width: 1400px) {
+      .kpi-grid-8 { grid-template-columns: repeat(4,1fr); }
+    }
+    @media (max-width: 1200px) {
+      .kpi-grid   { grid-template-columns: repeat(2,1fr); }
+      .chart-grid-2 { grid-template-columns: 1fr; }
+      .chart-grid-3 { grid-template-columns: 1fr 1fr; }
+      .insights-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 900px) {
+      .kpi-grid-8 { grid-template-columns: repeat(2,1fr); }
+      .chart-grid-2b { grid-template-columns: 1fr; }
+      .chart-grid-3  { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      :root { --sidebar-w: 0px; }
+      .main { margin-left: 0; }
+      .menu-btn { display: flex; }
+
+      /* Sidebar desliza por cima */
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        width: 240px;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+      }
+      .sidebar.open { transform: translateX(0); }
+
+      /* Topbar: título trunca, subtítulo some, sync vira ícone */
+      .topbar { padding: 0 12px; height: 52px; }
+      .topbar-left { flex: 1; min-width: 0; overflow: hidden; }
+      .topbar-left h1 { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .topbar-left span { display: none; }
+      .topbar-right { gap: 6px; flex-shrink: 0; }
+      .btn-label { display: none; }
+      .sync-btn { padding: 7px 10px; }
+
+      /* Filter bar: scroll horizontal, sem quebra */
+      .filter-bar { padding: 7px 12px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .filter-bar::-webkit-scrollbar { display: none; }
+      .filter-label { display: none; }
+      .period-pills { flex-shrink: 0; flex-wrap: nowrap; gap: 4px; }
+      .filter-note { display: none; }
+
+      /* Content */
+      .content { padding: 12px; }
+
+      /* KPI: 2 colunas, texto não vaza */
+      .kpi-grid   { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .kpi-grid-8 { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .kpi-card   { padding: 12px 10px; }
+      .kpi-value  { font-size: 16px; }
+      .kpi-label  { font-size: 10px; }
+      .kpi-sub    { font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+      /* Charts */
+      .chart-full  { margin-bottom: 10px; }
+      .chart-grid-2  { grid-template-columns: 1fr; gap: 10px; }
+      .chart-grid-2b { grid-template-columns: 1fr; gap: 10px; }
+      .chart-grid-3  { grid-template-columns: 1fr; gap: 10px; }
+
+      /* Cards */
+      .card { padding: 14px 14px; }
+      .card-header { margin-bottom: 12px; }
+
+      /* Status bar */
+      .status-bar { flex-wrap: wrap; gap: 6px; padding: 7px 12px; }
+      .status-bar-item:nth-child(2) { display: none; }
+      .status-bar-item:last-child { display: none; }
+    }
+    @media (max-width: 420px) {
+      .kpi-grid   { grid-template-columns: 1fr 1fr; }
+      .kpi-grid-8 { grid-template-columns: 1fr 1fr; }
+      .kpi-value  { font-size: 14px; }
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div class="app">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+        </div>
+        <div>
+          <div class="logo-text" id="sidebarClientName">Danutri</div>
+          <div class="logo-sub">Digihook Analytics</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Visão Geral</div>
+      <button class="nav-item active" id="nav-dashboard" onclick="switchView('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item" id="nav-insights" onclick="switchView('insights')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Insights IA
+      </button>
+
+      <div class="nav-section">E-commerce</div>
+      <button class="nav-item" id="nav-vendas" onclick="switchView('vendas')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Vendas
+      </button>
+      <button class="nav-item" id="nav-criativos" onclick="switchView('criativos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Criativos
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">DH</div>
+        <div>
+          <div class="user-name">Digihook</div>
+          <div class="user-role">Gestor de Tráfego</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 id="topbarTitle">Dashboard — Danutri</h1>
+        <span id="lastUpdateLabel">Carregando dados...</span>
+      </div>
+      <div class="topbar-right">
+        <button class="menu-btn" onclick="toggleSidebar()" aria-label="Menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <button class="sync-btn" id="syncBtn" onclick="loadData()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <span class="btn-label">Atualizar</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="filter-bar">
+      <span class="filter-label">Período:</span>
+      <div class="period-pills">
+        <button class="pill-btn" onclick="setPeriod('today',this)">Hoje</button>
+        <button class="pill-btn" onclick="setPeriod('7d',this)">7 dias</button>
+        <button class="pill-btn active" onclick="setPeriod('30d',this)">30 dias</button>
+        <button class="pill-btn" onclick="setPeriod('90d',this)">90 dias</button>
+        <button class="pill-btn" onclick="setPeriod('1y',this)">1 ano</button>
+        <button class="pill-btn" onclick="setPeriod('custom',this)">Personalizado</button>
+      </div>
+      <div class="custom-range" id="customRange">
+        <input type="date" class="date-input" id="dateFrom" onchange="applyFilter()" />
+        <span class="date-sep">até</span>
+        <input type="date" class="date-input" id="dateTo" onchange="applyFilter()" />
+      </div>
+      <span class="filter-note" id="filterNote">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Exibindo todos os dados
+      </span>
+    </div>
+
+    <div class="content">
+      <div id="view-dashboard"  class="view active"></div>
+      <div id="view-insights"   class="view"></div>
+      <div id="view-vendas"     class="view"></div>
+      <div id="view-criativos"  class="view"></div>
+    </div>
+
+    <footer class="status-bar">
+      <div class="status-bar-item">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Conectando...</span>
+      </div>
+      <div class="status-bar-item">
+        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Dados públicos · Google Sheets
+      </div>
+      <div class="status-bar-item" id="rowCountLabel">—</div>
+    </footer>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   CLIENT CONFIG
+═══════════════════════════════════════════════════ */
+const CLIENT_CONFIG = {
+  name: 'Danutri',
+  csvCampanha: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRUsdh3cFMN8mPzpQb8IsMpOGENQAfjHmOK9Nfw2d3daIFZIINhZIb-LZHqEngAc05tLI6IGfQ0wqIS/pub?output=csv',
+};
+
+/* ═══════════════════════════════════════════════════
+   Constantes
+═══════════════════════════════════════════════════ */
+const COLORS = ['#0ea5e9','#f97316','#10b981','#8b5cf6','#f59e0b','#ef4444','#ec4899','#14b8a6','#84cc16','#6366f1'];
+
+const charts = {};
+let allRows = [];
+let currentPeriod = '30d';
+let currentView   = 'dashboard';
+
+/* ═══════════════════════════════════════════════════
+   Formatters
+═══════════════════════════════════════════════════ */
+const n    = v => { if (!v||v==='-'||v==='—') return 0; const c=String(v).replace(/\./g,'').replace(',','.'); const f=parseFloat(c); return isNaN(f)?0:f; };
+const fmtR = v => 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtK = v => { if(v>=1e6) return (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+'M'; if(v>=1e3) return (v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:1})+'k'; return Math.round(v).toLocaleString('pt-BR'); };
+const fmtP = v => v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+const fmtD = d => { const [y,m,dy]=d.split('-'); return `${dy}/${m}`; };
+const shortC = s => s
+  .replace(/\[VENDAS\]\s*/gi,'')
+  .replace(/\[DANUTRI\]\s*/gi,'')
+  .replace(/\[COLLAB\]\s*/gi,'COLLAB ')
+  .replace(/SITE\s*-\s*/gi,'')
+  .replace(/ADD CARRINHO\s*/gi,'Carrinho ')
+  .replace(/^\s*[-–—]\s*/,'')
+  .trim().substring(0,26);
+
+/* ═══════════════════════════════════════════════════
+   Date filter
+═══════════════════════════════════════════════════ */
+function getDateRange(period) {
+  const to   = new Date(); to.setHours(23,59,59,999);
+  const from = new Date(); from.setHours(0,0,0,0);
+  if      (period==='today') { /* from=hoje 00:00 */ }
+  else if (period==='7d')    { from.setDate(from.getDate()-6); }
+  else if (period==='30d')   { from.setDate(from.getDate()-29); }
+  else if (period==='90d')   { from.setDate(from.getDate()-89); }
+  else if (period==='1y')    { from.setFullYear(from.getFullYear()-1); }
+  else if (period==='custom') {
+    const f=document.getElementById('dateFrom').value;
+    const t=document.getElementById('dateTo').value;
+    if (!f||!t) return null;
+    return { from: new Date(f+'T00:00:00'), to: new Date(t+'T23:59:59') };
+  }
+  return { from, to };
+}
+
+function filterRows(rows, period) {
+  const range = getDateRange(period);
+  if (!range) return rows;
+  return rows.filter(r => {
+    const d = r['Day'];
+    if (!d) return false;
+    const date = new Date(d+'T12:00:00');
+    return date >= range.from && date <= range.to;
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   CSV parser
+═══════════════════════════════════════════════════ */
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = parseLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = parseLine(line);
+    const row  = {};
+    headers.forEach((h,i) => { row[h.trim()] = (vals[i]||'').trim(); });
+    return row;
+  }).filter(r => Object.values(r).some(v => v));
+}
+
+function parseLine(line) {
+  const result=[]; let cur=''; let inQ=false;
+  for (const ch of line) {
+    if (ch==='"') { inQ=!inQ; }
+    else if (ch===','&&!inQ) { result.push(cur); cur=''; }
+    else { cur+=ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+/* ═══════════════════════════════════════════════════
+   Group helpers
+═══════════════════════════════════════════════════ */
+function groupByCampaign(rows) {
+  const m={};
+  rows.forEach(r => {
+    const k=r['Campaign Name']; if(!k) return;
+    if(!m[k]) m[k]={name:k,spent:0,reach:0,impressions:0,clicks:0,purchases:0,revenue:0,roasSum:0,roasCnt:0,cartCostSum:0,cartCostCnt:0,cppSum:0,cppCnt:0,ctrSum:0,ctrCnt:0};
+    m[k].spent       +=n(r['Amount Spent']);
+    m[k].reach       +=n(r['Reach']);
+    m[k].impressions +=n(r['Impressions']);
+    m[k].clicks      +=n(r['Link Clicks']);
+    m[k].purchases   +=n(r['Purchases']);
+    m[k].revenue     +=n(r['Purchases Conversion Value']);
+    const roas=n(r['Website Purchase ROAS'])||n(r['Purchase ROAS (Return on Ad Spend)']);
+    if(roas){m[k].roasSum+=roas; m[k].roasCnt++;}
+    const cart=n(r['Cost per Add to Cart']);
+    if(cart){m[k].cartCostSum+=cart; m[k].cartCostCnt++;}
+    const cpp=n(r['Cost per Purchase']);
+    if(cpp){m[k].cppSum+=cpp; m[k].cppCnt++;}
+    const ctr=n(r['CTR (Link Click-Through Rate)']);
+    if(ctr){m[k].ctrSum+=ctr; m[k].ctrCnt++;}
+  });
+  return Object.values(m).sort((a,b)=>b.spent-a.spent);
+}
+
+function groupByDay(rows) {
+  const m={};
+  rows.forEach(r => {
+    const d=r['Day']; if(!d) return;
+    if(!m[d]) m[d]={day:d,spent:0,reach:0,clicks:0,purchases:0,revenue:0};
+    m[d].spent    +=n(r['Amount Spent']);
+    m[d].reach    +=n(r['Reach']);
+    m[d].clicks   +=n(r['Link Clicks']);
+    m[d].purchases+=n(r['Purchases']);
+    m[d].revenue  +=n(r['Purchases Conversion Value']);
+  });
+  return Object.values(m).sort((a,b)=>a.day.localeCompare(b.day));
+}
+
+function parseRanking(val) {
+  if(!val) return 'none';
+  const v=val.toLowerCase();
+  if(v.includes('above')) return 'above';
+  if(v.includes('below')) return 'below';
+  if(v.includes('average')||v==='average') return 'avg';
+  return 'none';
+}
+function rankingBadge(val) {
+  const r=parseRanking(val);
+  if(r==='above') return `<span class="badge badge-above">Acima da média</span>`;
+  if(r==='avg')   return `<span class="badge badge-avg">Na média</span>`;
+  if(r==='below') return `<span class="badge badge-below">Abaixo da média</span>`;
+  return `<span class="badge badge-none">—</span>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   Chart builders
+═══════════════════════════════════════════════════ */
+const GRID_COLOR  = 'rgba(255,255,255,0.05)';
+const TICK_COLOR  = '#475569';
+const TICK_COLOR2 = '#94a3b8';
+
+function destroyChart(id) { if(charts[id]){charts[id].destroy();delete charts[id];} }
+
+function buildHBar(id, labels, data, colors) {
+  destroyChart(id);
+  const el=document.getElementById(id); if(!el) return;
+  charts[id]=new Chart(el,{
+    type:'bar',
+    data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'99'),borderColor:colors,borderWidth:1.5,borderRadius:4}]},
+    options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' R$ '+ctx.raw.toLocaleString('pt-BR',{minimumFractionDigits:2})}}},
+      scales:{x:{ticks:{color:TICK_COLOR,font:{size:10},callback:v=>'R$ '+fmtK(v)},grid:{color:GRID_COLOR}},y:{ticks:{color:TICK_COLOR2,font:{size:10}},grid:{display:false}}}}
+  });
+}
+
+function buildVBar(id, labels, data, color, fmt) {
+  destroyChart(id);
+  const el=document.getElementById(id); if(!el) return;
+  charts[id]=new Chart(el,{
+    type:'bar',
+    data:{labels,datasets:[{data,backgroundColor:color+'44',borderColor:color,borderWidth:1.5,borderRadius:4}]},
+    options:{responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:TICK_COLOR,font:{size:9},maxRotation:35,minRotation:20},grid:{display:false}},y:{ticks:{color:TICK_COLOR,font:{size:10},callback:v=>fmt(v)},grid:{color:GRID_COLOR}}}}
+  });
+}
+
+function buildDonut(id, labels, data, colors) {
+  destroyChart(id);
+  const el=document.getElementById(id); if(!el) return;
+  const total=data.reduce((a,b)=>a+b,0);
+  charts[id]=new Chart(el,{
+    type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:colors,borderColor:'transparent',hoverOffset:4}]},
+    options:{responsive:true,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${(ctx.raw/total*100).toFixed(1)}%`}}}}
+  });
+}
+
+function buildTrend(id, days) {
+  destroyChart(id);
+  const el=document.getElementById(id); if(!el) return;
+  const labels=days.map(d=>fmtD(d.day));
+  charts[id]=new Chart(el,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {type:'bar',  label:'Investimento', data:days.map(d=>d.spent),   backgroundColor:'rgba(14,165,233,0.25)', borderColor:'#0ea5e9', borderWidth:1.5, borderRadius:3, yAxisID:'y'},
+        {type:'line', label:'Receita',      data:days.map(d=>d.revenue), borderColor:'#10b981', backgroundColor:'transparent', borderWidth:2, pointRadius:0, pointHoverRadius:4, tension:0.4, yAxisID:'y2'}
+      ]
+    },
+    options:{
+      responsive:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,position:'top',align:'end',labels:{color:'#94a3b8',font:{size:10},boxWidth:10,padding:16}},
+        tooltip:{callbacks:{label:ctx=>` R$ ${ctx.raw.toLocaleString('pt-BR',{minimumFractionDigits:2})}`}}},
+      scales:{
+        x:{ticks:{color:TICK_COLOR,font:{size:9},maxTicksLimit:20},grid:{color:GRID_COLOR}},
+        y:{ticks:{color:TICK_COLOR,font:{size:10},callback:v=>'R$ '+fmtK(v)},grid:{color:GRID_COLOR},position:'left'},
+        y2:{ticks:{color:'#10b981',font:{size:10},callback:v=>'R$ '+fmtK(v)},grid:{display:false},position:'right'}
+      }
+    }
+  });
+}
+
+function buildLine(id, labels, datasets) {
+  destroyChart(id);
+  const el=document.getElementById(id); if(!el) return;
+  charts[id]=new Chart(el,{
+    type:'line',
+    data:{labels,datasets},
+    options:{
+      responsive:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,position:'top',align:'end',labels:{color:'#94a3b8',font:{size:10},boxWidth:10,padding:12}}},
+      scales:{x:{ticks:{color:TICK_COLOR,font:{size:9},maxTicksLimit:20},grid:{color:GRID_COLOR}},y:{ticks:{color:TICK_COLOR,font:{size:10}},grid:{color:GRID_COLOR}}}
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   KPI helper
+═══════════════════════════════════════════════════ */
+function kpi(cls,icon,label,value,sub) {
+  return `<div class="kpi-card ${cls}"><div class="kpi-icon ${cls}">${icon}</div><div class="kpi-value">${value}</div><div class="kpi-label">${label}</div><div class="kpi-sub">${sub}</div></div>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   SVG Icons
+═══════════════════════════════════════════════════ */
+const svgMoney  =`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
+const svgReach  =`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+const svgClick  =`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>`;
+const svgCart   =`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>`;
+const svgRoas   =`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`;
+const svgRecv   =`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`;
+const svgCtr    =`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
+const svgCpm    =`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`;
+const svgStar   =`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+
+/* ═══════════════════════════════════════════════════
+   Empty state
+═══════════════════════════════════════════════════ */
+function emptyState(period) {
+  const label=period==='today'?'hoje':'este período';
+  return `<div class="loader-wrap"><svg class="empty-icon" viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#475569" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div class="empty-title">Sem dados para ${label}</div><div class="empty-desc">Os dados do Meta Ads costumam ter delay de algumas horas. Tente <strong>7 dias</strong> ou <strong>30 dias</strong>.</div></div>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER: Dashboard
+═══════════════════════════════════════════════════ */
+function renderDashboard(rows) {
+  const el=document.getElementById('view-dashboard');
+  if(rows.length===0){el.innerHTML=emptyState(currentPeriod);return;}
+
+  const T=rows.reduce((a,r)=>{
+    a.reach       +=n(r['Reach']);
+    a.impressions +=n(r['Impressions']);
+    a.spent       +=n(r['Amount Spent']);
+    a.clicks      +=n(r['Link Clicks']);
+    a.purchases   +=n(r['Purchases']);
+    a.revenue     +=n(r['Purchases Conversion Value']);
+    const roas=n(r['Website Purchase ROAS'])||n(r['Purchase ROAS (Return on Ad Spend)']);
+    if(roas){a.roasSum+=roas; a.roasCnt++;}
+    const cart=n(r['Cost per Add to Cart']);
+    if(cart){a.cartSum+=cart; a.cartCnt++;}
+    const cpp=n(r['Cost per Purchase']);
+    if(cpp){a.cppSum+=cpp; a.cppCnt++;}
+    a.ctrSum+=n(r['CTR (Link Click-Through Rate)']);
+    a.cpmSum+=n(r['CPM (Cost per 1,000 Impressions)']);
+    a.cnt++;
+    return a;
+  },{reach:0,impressions:0,spent:0,clicks:0,purchases:0,revenue:0,roasSum:0,roasCnt:0,cartSum:0,cartCnt:0,cppSum:0,cppCnt:0,ctrSum:0,cpmSum:0,cnt:0});
+
+  const avgROAS  = T.roasCnt ? T.roasSum/T.roasCnt : (T.spent>0&&T.revenue>0 ? T.revenue/T.spent : 0);
+  const avgCPP   = T.cppCnt  ? T.cppSum/T.cppCnt   : (T.purchases>0 ? T.spent/T.purchases : 0);
+  const avgCart  = T.cartCnt ? T.cartSum/T.cartCnt  : 0;
+  const avgCTR   = T.cnt ? T.ctrSum/T.cnt : 0;
+  const avgCPM   = T.cnt ? T.cpmSum/T.cnt : 0;
+  const cpc      = T.clicks ? T.spent/T.clicks : 0;
+
+  const camps    = groupByCampaign(rows);
+  const days     = groupByDay(rows);
+  const totalSpent = T.spent;
+
+  el.innerHTML=`
+    <div class="kpi-grid-8">
+      ${kpi('c1',svgMoney, 'Investido',       fmtR(T.spent),       `${rows.length} conjuntos de anúncios`)}
+      ${kpi('c3',svgRecv,  'Receita',          fmtR(T.revenue),     T.spent>0?`Retorno: ${(T.revenue/T.spent).toFixed(2)}x`:'—')}
+      ${kpi('c5',svgRoas,  'ROAS',             avgROAS>0?avgROAS.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'x':'—', avgROAS>=3?'▲ Excelente (≥3x)':avgROAS>=2?'▲ Bom (≥2x)':avgROAS>0?'▼ Abaixo do ideal':'Sem dados')}
+      ${kpi('c4',svgCart,  'Compras',          fmtK(T.purchases),   avgCPP>0?`CPP: ${fmtR(avgCPP)}`:'—')}
+      ${kpi('c6',svgMoney, 'Custo por Compra', avgCPP>0?fmtR(avgCPP):'—', avgCPP>0&&avgCPP<=30?'▲ CPP eficiente':avgCPP<=60?'▼ CPP moderado':avgCPP>0?'▼ CPP elevado':'Sem conversões')}
+      ${kpi('c7',svgCart,  'Custo Carrinho',   avgCart>0?fmtR(avgCart):'—', avgCart>0?`${T.purchases>0?((T.purchases/(T.cartCnt||1))*100).toFixed(0):'—'}% conv. p/ compra`:'Sem dados')}
+      ${kpi('c2',svgClick, 'Cliques',          fmtK(T.clicks),      `CPC: ${fmtR(cpc)} · CTR: ${fmtP(avgCTR)}`)}
+      ${kpi('c8',svgReach, 'Alcance',          fmtK(T.reach),       `${fmtK(T.impressions)} impressões · CPM: R$ ${avgCPM.toLocaleString('pt-BR',{maximumFractionDigits:2})}`)}
+    </div>
+
+    <div class="chart-full card">
+      <div class="card-header"><div><div class="card-title">Evolução Diária</div><div class="card-subtitle">Investimento (barras) e Receita (linha) por dia</div></div></div>
+      <canvas id="chartTrend" height="100"></canvas>
+    </div>
+
+    <div class="chart-grid-2">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Investimento por Campanha</div><div class="card-subtitle">Total gasto em R$</div></div></div>
+        <canvas id="chartSpent" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Distribuição do Budget</div><div class="card-subtitle">% por campanha</div></div></div>
+        <div class="doughnut-wrap">
+          <div class="doughnut-chart-container">
+            <canvas id="chartDonut"></canvas>
+            <div class="doughnut-center"><div class="doughnut-center-value">${fmtR(T.spent).replace('R$ ','')}</div><div class="doughnut-center-label">Investido</div></div>
+          </div>
+          <div class="legend" id="donutLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-grid-3">
+      <div class="card"><div class="card-header"><div><div class="card-title">Receita por Campanha</div><div class="card-subtitle">Purchases Conversion Value</div></div></div><canvas id="chartRevenue" height="190"></canvas></div>
+      <div class="card"><div class="card-header"><div><div class="card-title">Compras</div><div class="card-subtitle">Por campanha</div></div></div><canvas id="chartPurchases" height="190"></canvas></div>
+      <div class="card"><div class="card-header"><div><div class="card-title">Cliques no Link</div><div class="card-subtitle">Por campanha</div></div></div><canvas id="chartClicks" height="190"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Detalhamento por Conjunto</div><div class="card-subtitle">${rows.length} linhas · sincronizado do Google Sheets</div></div></div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Campanha</th><th>Conjunto</th><th>Dia</th><th>Alcance</th><th>Gasto</th><th>Cliques</th><th>CTR</th><th>Compras</th><th>Receita</th><th>ROAS</th><th>CPP</th></tr></thead>
+          <tbody>${rows.slice(0,200).map(r=>`<tr>
+            <td title="${r['Campaign Name']}">${shortC(r['Campaign Name']||'')}</td>
+            <td>${(r['Ad Set Name']||'').substring(0,28)}</td>
+            <td>${r['Day']||'—'}</td>
+            <td>${fmtK(n(r['Reach']))}</td>
+            <td>${n(r['Amount Spent'])?fmtR(n(r['Amount Spent'])):'—'}</td>
+            <td>${fmtK(n(r['Link Clicks']))}</td>
+            <td>${n(r['CTR (Link Click-Through Rate)'])?fmtP(n(r['CTR (Link Click-Through Rate)'])):'—'}</td>
+            <td>${n(r['Purchases'])||'—'}</td>
+            <td>${n(r['Purchases Conversion Value'])?fmtR(n(r['Purchases Conversion Value'])):'—'}</td>
+            <td>${(n(r['Website Purchase ROAS'])||n(r['Purchase ROAS (Return on Ad Spend)']))?((n(r['Website Purchase ROAS'])||n(r['Purchase ROAS (Return on Ad Spend)']))).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'x':'—'}</td>
+            <td>${n(r['Cost per Purchase'])?fmtR(n(r['Cost per Purchase'])):'—'}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+
+  buildTrend('chartTrend', days);
+  buildHBar ('chartSpent',    camps.map(c=>shortC(c.name)), camps.map(c=>c.spent),    COLORS.slice(0,camps.length));
+  buildDonut('chartDonut',    camps.map(c=>shortC(c.name)), camps.map(c=>c.spent),    COLORS.slice(0,camps.length));
+  buildVBar ('chartRevenue',  camps.map(c=>shortC(c.name)), camps.map(c=>c.revenue),  '#10b981', v=>'R$ '+fmtK(v));
+  buildVBar ('chartPurchases',camps.map(c=>shortC(c.name)), camps.map(c=>c.purchases),'#f59e0b', fmtK);
+  buildVBar ('chartClicks',   camps.map(c=>shortC(c.name)), camps.map(c=>c.clicks),   '#f97316', fmtK);
+
+  document.getElementById('donutLegend').innerHTML=camps.slice(0,6).map((c,i)=>`
+    <div class="legend-item">
+      <div class="legend-left"><div class="legend-dot" style="background:${COLORS[i]}"></div><span class="legend-name">${shortC(c.name)}</span></div>
+      <div style="display:flex;align-items:center"><span class="legend-val">${fmtR(c.spent)}</span><span class="legend-pct">${totalSpent>0?(c.spent/totalSpent*100).toFixed(1):'0'}%</span></div>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER: Vendas (E-commerce deep dive)
+═══════════════════════════════════════════════════ */
+function renderVendas(rows) {
+  const el=document.getElementById('view-vendas');
+  if(rows.length===0){el.innerHTML=emptyState(currentPeriod);return;}
+
+  const camps=groupByCampaign(rows);
+  const days=groupByDay(rows);
+  const T=rows.reduce((a,r)=>{
+    a.spent    +=n(r['Amount Spent']);
+    a.purchases+=n(r['Purchases']);
+    a.revenue  +=n(r['Purchases Conversion Value']);
+    const roas=n(r['Website Purchase ROAS'])||n(r['Purchase ROAS (Return on Ad Spend)']);
+    if(roas){a.roasSum+=roas;a.roasCnt++;}
+    const cpp=n(r['Cost per Purchase']);
+    if(cpp){a.cppSum+=cpp;a.cppCnt++;}
+    return a;
+  },{spent:0,purchases:0,revenue:0,roasSum:0,roasCnt:0,cppSum:0,cppCnt:0});
+
+  const avgROAS=T.roasCnt?T.roasSum/T.roasCnt:(T.spent>0&&T.revenue>0?T.revenue/T.spent:0);
+  const avgCPP=T.cppCnt?T.cppSum/T.cppCnt:(T.purchases>0?T.spent/T.purchases:0);
+  const topROAS=[...camps].filter(c=>c.roasCnt>0).sort((a,b)=>(b.roasSum/b.roasCnt)-(a.roasSum/a.roasCnt))[0];
+  const topRevenue=[...camps].sort((a,b)=>b.revenue-a.revenue)[0];
+  const bestCPP=[...camps].filter(c=>c.purchases>0).sort((a,b)=>(a.spent/a.purchases)-(b.spent/b.purchases))[0];
+
+  el.innerHTML=`
+    <div class="kpi-grid" style="margin-bottom:18px">
+      ${kpi('c3',svgRecv,  'Receita Total',    fmtR(T.revenue),   `${fmtK(T.purchases)} compras realizadas`)}
+      ${kpi('c5',svgRoas,  'ROAS Médio',       avgROAS>0?avgROAS.toFixed(2)+'x':'—', avgROAS>=3?'Excelente':avgROAS>=2?'Bom':avgROAS>0?'Otimizar':'')}
+      ${kpi('c4',svgCart,  'Total Compras',    fmtK(T.purchases), `${T.spent>0?'Invest.: '+fmtR(T.spent):'—'}`)}
+      ${kpi('c6',svgMoney, 'CPP Médio',        avgCPP>0?fmtR(avgCPP):'—', avgCPP<=30?'Eficiente':avgCPP<=60?'Moderado':'Elevado')}
+    </div>
+
+    <div class="chart-grid-2b">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Receita Diária</div><div class="card-subtitle">Purchases Conversion Value por dia</div></div></div>
+        <canvas id="chartRevenueDay" height="220"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">ROAS por Campanha</div><div class="card-subtitle">Retorno sobre investimento</div></div></div>
+        <canvas id="chartRoasCamp" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-grid-2b">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Compras por Campanha</div><div class="card-subtitle">Volume de conversões</div></div></div>
+        <canvas id="chartPurchCamp" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Custo por Compra (CPP)</div><div class="card-subtitle">Por campanha — menor é melhor</div></div></div>
+        <canvas id="chartCppCamp" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Ranking de Campanhas — Vendas</div><div class="card-subtitle">Ordenado por receita gerada</div></div></div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>#</th><th>Campanha</th><th>Gasto</th><th>Receita</th><th>ROAS</th><th>Compras</th><th>CPP</th><th>Cliques</th></tr></thead>
+          <tbody>${camps.sort((a,b)=>b.revenue-a.revenue).map((c,i)=>`<tr>
+            <td style="color:var(--text-muted);font-size:11px">${i+1}</td>
+            <td title="${c.name}">${shortC(c.name)}</td>
+            <td>${fmtR(c.spent)}</td>
+            <td style="color:var(--green);font-weight:600">${c.revenue>0?fmtR(c.revenue):'—'}</td>
+            <td style="color:var(--purple);font-weight:600">${c.roasCnt?(c.roasSum/c.roasCnt).toFixed(2)+'x':(c.spent>0&&c.revenue>0?(c.revenue/c.spent).toFixed(2)+'x':'—')}</td>
+            <td>${c.purchases||'—'}</td>
+            <td>${c.purchases>0?fmtR(c.spent/c.purchases):'—'}</td>
+            <td>${fmtK(c.clicks)}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+
+  buildVBar('chartRevenueDay', days.map(d=>fmtD(d.day)), days.map(d=>d.revenue), '#10b981', v=>'R$ '+fmtK(v));
+
+  const campsWithRoas=camps.filter(c=>c.purchases>0);
+  buildVBar('chartRoasCamp',  campsWithRoas.map(c=>shortC(c.name)), campsWithRoas.map(c=>c.roasCnt?(c.roasSum/c.roasCnt):(c.revenue/c.spent||0)), '#8b5cf6', v=>v.toFixed(1)+'x');
+  buildVBar('chartPurchCamp', camps.map(c=>shortC(c.name)), camps.map(c=>c.purchases), '#f59e0b', fmtK);
+
+  const campsWithCpp=camps.filter(c=>c.purchases>0);
+  buildVBar('chartCppCamp', campsWithCpp.map(c=>shortC(c.name)), campsWithCpp.map(c=>c.spent/c.purchases), '#ef4444', v=>'R$ '+v.toFixed(0));
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER: Criativos
+═══════════════════════════════════════════════════ */
+function renderCriativos(rows) {
+  const el=document.getElementById('view-criativos');
+  if(rows.length===0){el.innerHTML=emptyState(currentPeriod);return;}
+
+  const adMap={};
+  rows.forEach(r=>{
+    const k=r['Ad Name']||r['Ad Set Name']||'—';
+    if(!adMap[k]) adMap[k]={name:k,spent:0,reach:0,clicks:0,purchases:0,revenue:0,impressions:0,ctrSum:0,ctrCnt:0,roasSum:0,roasCnt:0,quality:'',engagement:'',conversion:''};
+    adMap[k].spent      +=n(r['Amount Spent']);
+    adMap[k].reach      +=n(r['Reach']);
+    adMap[k].clicks     +=n(r['Link Clicks']);
+    adMap[k].purchases  +=n(r['Purchases']);
+    adMap[k].revenue    +=n(r['Purchases Conversion Value']);
+    adMap[k].impressions+=n(r['Impressions']);
+    if(n(r['CTR (Link Click-Through Rate)'])){adMap[k].ctrSum+=n(r['CTR (Link Click-Through Rate)']);adMap[k].ctrCnt++;}
+    const roas=n(r['Website Purchase ROAS'])||n(r['Purchase ROAS (Return on Ad Spend)']);
+    if(roas){adMap[k].roasSum+=roas;adMap[k].roasCnt++;}
+    if(r['Quality Ranking'])         adMap[k].quality    =r['Quality Ranking'];
+    if(r['Engagement Rate Ranking']) adMap[k].engagement =r['Engagement Rate Ranking'];
+    if(r['Conversion Rate Ranking']) adMap[k].conversion =r['Conversion Rate Ranking'];
+  });
+  const ads=Object.values(adMap).sort((a,b)=>b.spent-a.spent);
+
+  const qualDist={above:0,avg:0,below:0,none:0};
+  ads.forEach(a=>qualDist[parseRanking(a.quality)]++);
+
+  el.innerHTML=`
+    <div class="chart-grid-2b" style="margin-bottom:18px">
+      <div class="insight-card">
+        <div class="insight-header"><div class="insight-icon" style="background:rgba(139,92,246,0.15)"><svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="insight-title">Quality Ranking</div></div>
+        <div class="insight-body">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <span class="badge badge-above">▲ Acima: ${qualDist.above}</span>
+            <span class="badge badge-avg">● Na média: ${qualDist.avg}</span>
+            <span class="badge badge-below">▼ Abaixo: ${qualDist.below}</span>
+          </div>
+          <p>${qualDist.above>qualDist.below?'Maioria dos criativos está <strong>acima da média</strong> de qualidade.':'Atenção: há criativos <strong>abaixo da média</strong>. Revise imagem/copy das peças com baixo ranking.'}</p>
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-header"><div class="insight-icon" style="background:rgba(16,185,129,0.15)"><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="23 7 13.5 15.5 8.5 10.5 2 17"/></svg></div><div class="insight-title">Top Criativo — Conversões</div></div>
+        <div class="insight-body">
+          ${ads.find(a=>a.purchases>0)?`<p><strong>${ads.find(a=>a.purchases>0).name.substring(0,40)}</strong></p><ul class="insight-list">
+            <li>Compras: <strong>${ads.find(a=>a.purchases>0).purchases}</strong></li>
+            <li>Receita: <strong>${fmtR(ads.find(a=>a.purchases>0).revenue)}</strong></li>
+            <li>ROAS: <strong>${ads.find(a=>a.purchases>0).roasCnt?(ads.find(a=>a.purchases>0).roasSum/ads.find(a=>a.purchases>0).roasCnt).toFixed(2)+'x':'—'}</strong></li>
+            <li>Gasto: <strong>${fmtR(ads.find(a=>a.purchases>0).spent)}</strong></li>
+          </ul>`:'Sem conversões no período'}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Performance por Criativo</div><div class="card-subtitle">${ads.length} anúncios no período</div></div></div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Anúncio</th><th>Gasto</th><th>Alcance</th><th>Cliques</th><th>CTR</th><th>Compras</th><th>Receita</th><th>ROAS</th><th>Qualidade</th><th>Conversão</th></tr></thead>
+          <tbody>${ads.map(a=>`<tr>
+            <td title="${a.name}" style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${a.name.substring(0,32)}</td>
+            <td>${fmtR(a.spent)}</td>
+            <td>${fmtK(a.reach)}</td>
+            <td>${fmtK(a.clicks)}</td>
+            <td>${a.ctrCnt?fmtP(a.ctrSum/a.ctrCnt):'—'}</td>
+            <td style="color:${a.purchases>0?'var(--green)':'inherit'};font-weight:${a.purchases>0?'600':'400'}">${a.purchases||'—'}</td>
+            <td>${a.revenue>0?fmtR(a.revenue):'—'}</td>
+            <td style="color:var(--purple)">${a.roasCnt?(a.roasSum/a.roasCnt).toFixed(2)+'x':'—'}</td>
+            <td>${rankingBadge(a.quality)}</td>
+            <td>${rankingBadge(a.conversion)}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER: Insights IA
+═══════════════════════════════════════════════════ */
+function renderInsights(rows) {
+  const el=document.getElementById('view-insights');
+  if(rows.length===0){el.innerHTML=emptyState(currentPeriod);return;}
+
+  const T=rows.reduce((a,r)=>{
+    a.reach    +=n(r['Reach']); a.impressions+=n(r['Impressions']); a.spent+=n(r['Amount Spent']);
+    a.clicks   +=n(r['Link Clicks']); a.purchases+=n(r['Purchases']); a.revenue+=n(r['Purchases Conversion Value']);
+    const roas=n(r['Website Purchase ROAS'])||n(r['Purchase ROAS (Return on Ad Spend)']);
+    if(roas){a.roasSum+=roas;a.roasCnt++;}
+    const cpp=n(r['Cost per Purchase']);
+    if(cpp){a.cppSum+=cpp;a.cppCnt++;}
+    a.ctrSum+=n(r['CTR (Link Click-Through Rate)']); a.cpmSum+=n(r['CPM (Cost per 1,000 Impressions)']); a.cnt++;
+    return a;
+  },{reach:0,impressions:0,spent:0,clicks:0,purchases:0,revenue:0,roasSum:0,roasCnt:0,cppSum:0,cppCnt:0,ctrSum:0,cpmSum:0,cnt:0});
+
+  const avgROAS = T.roasCnt?T.roasSum/T.roasCnt:(T.spent>0&&T.revenue>0?T.revenue/T.spent:0);
+  const avgCPP  = T.cppCnt?T.cppSum/T.cppCnt:(T.purchases>0?T.spent/T.purchases:0);
+  const avgCTR  = T.cnt?T.ctrSum/T.cnt:0;
+  const avgCPM  = T.cnt?T.cpmSum/T.cnt:0;
+  const camps   = groupByCampaign(rows);
+  const topRevenue=[...camps].sort((a,b)=>b.revenue-a.revenue)[0];
+  const topClicks=[...camps].sort((a,b)=>b.clicks-a.clicks)[0];
+  const bestROAS=[...camps].filter(c=>c.purchases>0).sort((a,b)=>{
+    const ra=a.roasCnt?(a.roasSum/a.roasCnt):(a.revenue/a.spent||0);
+    const rb=b.roasCnt?(b.roasSum/b.roasCnt):(b.revenue/b.spent||0);
+    return rb-ra;
+  })[0];
+  const top3pct=T.spent>0?camps.slice(0,3).reduce((s,c)=>s+c.spent,0)/T.spent*100:0;
+
+  const roasSt=avgROAS>=3?'good':avgROAS>=2?'warn':'bad';
+  const ctrSt =avgCTR>=1?'good':avgCTR>=0.5?'warn':'bad';
+  const cpmSt =avgCPM<=15?'good':avgCPM<=25?'warn':'bad';
+  const cppSt =avgCPP<=30?'good':avgCPP<=60?'warn':'bad';
+
+  el.innerHTML=`
+    <div class="insights-grid">
+      <div class="insight-card full">
+        <div class="insight-header">
+          <div class="insight-icon" style="background:rgba(16,185,129,0.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
+          <div class="insight-title">Resumo de Performance — Danutri</div>
+        </div>
+        <div class="insight-body">
+          <p>No período analisado, as campanhas da <strong>Danutri</strong> alcançaram <strong>${fmtK(T.reach)} pessoas únicas</strong> com <strong>${fmtK(T.impressions)} impressões</strong>. O investimento total foi de <strong>${fmtR(T.spent)}</strong>, gerando <strong>${fmtK(T.clicks)} cliques</strong>${T.purchases>0?` e <strong>${fmtK(T.purchases)} compras</strong> com receita de <strong>${fmtR(T.revenue)}</strong>`:' sem compras registradas no período'}.</p>
+          ${avgROAS>0?`<br><p>O ROAS médio foi de <strong>${avgROAS.toFixed(2)}x</strong> — ${avgROAS>=3?'excelente retorno, campanha altamente lucrativa':avgROAS>=2?'bom retorno, há espaço para escalar':avgROAS>=1?'retorno positivo, otimizar para melhorar margem':'ROAS abaixo de 1x — revisar estratégia urgente'}.</p>`:''}
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-icon" style="background:rgba(139,92,246,0.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg></div>
+          <div class="insight-title">Campanhas em Destaque</div>
+        </div>
+        <div class="insight-body">
+          <ul class="insight-list">
+            ${topRevenue&&topRevenue.revenue>0?`<li><strong>${shortC(topRevenue.name)}</strong> — maior receita: <strong>${fmtR(topRevenue.revenue)}</strong></li>`:''}
+            ${bestROAS?`<li><strong>${shortC(bestROAS.name)}</strong> — melhor ROAS: <strong>${bestROAS.roasCnt?(bestROAS.roasSum/bestROAS.roasCnt).toFixed(2):(bestROAS.revenue/bestROAS.spent).toFixed(2)}x</strong></li>`:''}
+            ${topClicks?`<li><strong>${shortC(topClicks.name)}</strong> — mais cliques: <strong>${fmtK(topClicks.clicks)}</strong></li>`:''}
+            <li>As 3 maiores campanhas concentram <strong>${top3pct.toFixed(0)}%</strong> do orçamento</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-icon" style="background:rgba(245,158,11,0.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+          <div class="insight-title">Indicadores-Chave</div>
+        </div>
+        <div>
+          <div class="metric-row">
+            <span class="metric-name">ROAS</span>
+            <div class="metric-bar"><div class="metric-fill" style="width:${Math.min(avgROAS/5*100,100)}%;background:#8b5cf6"></div></div>
+            <span class="metric-value">${avgROAS>0?avgROAS.toFixed(2)+'x':'—'}</span>
+            <span class="tag-${roasSt}" style="margin-left:8px">${roasSt==='good'?'Ótimo':roasSt==='warn'?'Bom':'Baixo'}</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">CPP Médio</span>
+            <div class="metric-bar"><div class="metric-fill" style="width:${avgCPP>0?Math.min(avgCPP/100*100,100):0}%;background:#ef4444"></div></div>
+            <span class="metric-value">${avgCPP>0?fmtR(avgCPP):'—'}</span>
+            <span class="tag-${cppSt}" style="margin-left:8px">${cppSt==='good'?'Baixo':cppSt==='warn'?'Médio':'Alto'}</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">CTR Médio</span>
+            <div class="metric-bar"><div class="metric-fill" style="width:${Math.min(avgCTR/2*100,100)}%;background:#0ea5e9"></div></div>
+            <span class="metric-value">${fmtP(avgCTR)}</span>
+            <span class="tag-${ctrSt}" style="margin-left:8px">${ctrSt==='good'?'Bom':ctrSt==='warn'?'Médio':'Baixo'}</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">CPM Médio</span>
+            <div class="metric-bar"><div class="metric-fill" style="width:${Math.min(avgCPM/40*100,100)}%;background:#f97316"></div></div>
+            <span class="metric-value">R$ ${avgCPM.toLocaleString('pt-BR',{maximumFractionDigits:2})}</span>
+            <span class="tag-${cpmSt}" style="margin-left:8px">${cpmSt==='good'?'Baixo':cpmSt==='warn'?'Médio':'Alto'}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-icon" style="background:rgba(14,165,233,0.14)"><svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+          <div class="insight-title">Recomendações</div>
+        </div>
+        <div class="insight-body">
+          <ul class="insight-list">
+            ${avgROAS>0&&avgROAS<2?'<li>ROAS abaixo de 2x — revisar <strong>segmentação de público</strong> e ticket médio dos produtos anunciados</li>':''}
+            ${avgROAS>=3&&bestROAS?`<li>ROAS saudável — considerar <strong>escalar budget</strong> em "${shortC(bestROAS.name)}"</li>`:''}
+            ${avgCTR<0.5?'<li>CTR baixo — testar novos <strong>criativos e headlines</strong> com chamada para ação clara</li>':''}
+            ${avgCPM>25?'<li>CPM elevado — revisar <strong>sobreposição de públicos</strong> e testar novos segmentos</li>':''}
+            ${avgCPP>60?'<li>CPP alto — otimizar <strong>funil pós-clique</strong>: checkout, velocidade da página e oferta</li>':''}
+            ${top3pct>80?`<li>Budget concentrado (${top3pct.toFixed(0)}% em 3 campanhas) — diversificar com <strong>testes A/B</strong></li>`:''}
+            <li>Acompanhar a <strong>taxa de abandono de carrinho</strong> para otimizar o custo por compra</li>
+          </ul>
+        </div>
+      </div>
+    </div>`
+}
+
+/* ═══════════════════════════════════════════════════
+   View controller
+═══════════════════════════════════════════════════ */
+function switchView(view) {
+  currentView=view;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  const navEl=document.getElementById('nav-'+view);
+  if(navEl) navEl.classList.add('active');
+  const titles={dashboard:'Dashboard — Danutri',insights:'Insights IA — Danutri',vendas:'Vendas — Danutri',criativos:'Criativos — Danutri'};
+  document.getElementById('topbarTitle').textContent=titles[view]||'Danutri';
+}
+
+/* ═══════════════════════════════════════════════════
+   Period / Filter
+═══════════════════════════════════════════════════ */
+function setPeriod(period, btn) {
+  currentPeriod=period;
+  document.querySelectorAll('.pill-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.getElementById('customRange').classList.toggle('visible', period==='custom');
+  if(allRows.length>0) applyFilter();
+}
+
+function applyFilter() {
+  const fRows=filterRows(allRows, currentPeriod);
+  renderDashboard(fRows);
+  renderVendas(fRows);
+  renderCriativos(fRows);
+  renderInsights(fRows);
+
+  const range=getDateRange(currentPeriod);
+  const label=range?range.from.toLocaleDateString('pt-BR')+' – '+range.to.toLocaleDateString('pt-BR'):'período personalizado';
+  document.getElementById('filterNote').innerHTML=`<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${fRows.length} linhas · ${label}`;
+}
+
+/* ═══════════════════════════════════════════════════
+   Data loading
+═══════════════════════════════════════════════════ */
+async function fetchCSV(url) {
+  if(!url) return [];
+  try {
+    const res=await fetch(url,{redirect:'follow'});
+    const text=await res.text();
+    return parseCSV(text);
+  } catch { return []; }
+}
+
+async function loadData() {
+  const btn=document.getElementById('syncBtn');
+  const dot=document.getElementById('statusDot');
+  btn.classList.add('loading');
+  dot.classList.add('loading');
+  document.getElementById('statusText').textContent='Sincronizando...';
+
+  ['dashboard','vendas','criativos','insights'].forEach(v=>{
+    document.getElementById('view-'+v).innerHTML=`<div class="loader-wrap"><div class="spinner"></div><div class="loader-text">Buscando dados...</div></div>`;
+  });
+
+  try {
+    const camp=await fetchCSV(CLIENT_CONFIG.csvCampanha);
+    allRows=camp.filter(r=>r['Campaign Name']);
+    applyFilter();
+
+    const now=new Date().toLocaleString('pt-BR');
+    document.getElementById('lastUpdateLabel').textContent='Atualizado: '+now;
+    document.getElementById('statusText').textContent=`Sincronizado · ${allRows.length} linhas`;
+    document.getElementById('rowCountLabel').textContent=`${allRows.length} registros`;
+    dot.classList.remove('loading');
+  } catch(err) {
+    ['dashboard','vendas','criativos','insights'].forEach(v=>{
+      document.getElementById('view-'+v).innerHTML=`<div class="error-box"><strong>Erro ao carregar dados</strong><br><span style="font-size:12px;opacity:0.8">${err.message}</span></div>`;
+    });
+    document.getElementById('statusText').textContent='Erro na conexão';
+  } finally {
+    btn.classList.remove('loading');
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   Mobile sidebar
+═══════════════════════════════════════════════════ */
+function toggleSidebar() {
+  const sb=document.getElementById('sidebar');
+  const ov=document.getElementById('sidebarOverlay');
+  const open=sb.classList.toggle('open');
+  ov.classList.toggle('visible', open);
+  document.body.style.overflow=open?'hidden':'';
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('visible');
+  document.body.style.overflow='';
+}
+
+// Fechar sidebar ao navegar (mobile)
+document.querySelectorAll('.nav-item').forEach(btn=>{
+  btn.addEventListener('click', ()=>{ if(window.innerWidth<=768) closeSidebar(); });
+});
+
+// Init
+document.getElementById('sidebarClientName').textContent=CLIENT_CONFIG.name;
+loadData();
+</script>
+</body>
+</html>
